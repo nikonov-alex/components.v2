@@ -1,0 +1,23 @@
+{
+  "name": "@nikonov-alex/components.v2",
+  "version": "0.0.1",
+  "description": "Components library inspired by HTDP book",
+  "main": "index.js",
+  "types": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikonov-alex/components.v2.git"
+  },
+  "author": "Aleksander Nikonov <nikonov.personal.mail@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nikonov-alex/components.v2/issues"
+  },
+  "homepage": "https://github.com/nikonov-alex/components.v2#readme",
+  "dependencies": {
+    "morphdom": "^2.7.0"
+  }
+}
