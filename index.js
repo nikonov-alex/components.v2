@@ -1,8 +1,16 @@
 import morphdom from "morphdom";
 const has_getter = (prop) => "get" in prop;
+const GLOBAL_EVENTS = ["hashchange", "popstate"];
+const localEvents = (events) => Object.keys(events).reduce((result, event) => GLOBAL_EVENTS.includes(event)
+    ? result
+    : Object.assign(Object.assign({}, result), { [event]: events[event] }), {});
+const globalEvents = (events) => Object.keys(events).reduce((result, event) => !GLOBAL_EVENTS.includes(event)
+    ? result
+    : Object.assign(Object.assign({}, result), { [event]: events[event] }), {});
 class _Component extends HTMLElement {
     constructor(args, stylesheet) {
         super();
+        this._globalEvents = {};
         this._state = args.initialState;
         this._render = args.render;
         this._root = this._render(this._state);
@@ -21,7 +29,8 @@ class _Component extends HTMLElement {
             this._connectMutationObserver(args.domchange);
         }
         if (args.events) {
-            this._bindEvents(args.events, shadowdom);
+            this._bindEvents(localEvents(args.events), shadowdom);
+            this._globalEvents = globalEvents(args.events);
         }
         if (args.props) {
             this._defineProps(args.props);
@@ -55,6 +64,20 @@ class _Component extends HTMLElement {
         };
         Object.keys(events).forEach(eventName => {
             shadowdom.addEventListener(eventName, eventHandler, true);
+        });
+    }
+    globalEventHandler(event) {
+        const handler = this._globalEvents[event.type];
+        this._changeState(handler(this._state, event));
+    }
+    connectedCallback() {
+        Object.keys(this._globalEvents).forEach(eventName => {
+            window.addEventListener(eventName, this.globalEventHandler, true);
+        });
+    }
+    disconnectedCallback() {
+        Object.keys(this._globalEvents).forEach(eventName => {
+            window.removeEventListener(eventName, this.globalEventHandler, true);
         });
     }
     _connectMutationObserver(handler) {

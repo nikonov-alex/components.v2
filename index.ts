@@ -24,12 +24,31 @@ type Args<State, Props extends {}> = {
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> }
 };
 
+
+const GLOBAL_EVENTS = [ "hashchange", "popstate" ];
+
+const localEvents = <State>( events: Events<State> ): Events<State> =>
+    Object.keys( events ).reduce( ( result, event ) =>
+        GLOBAL_EVENTS.includes( event )
+            ? result
+            : { ... result, [event]: events[event] }
+    , { } );
+
+const globalEvents = <State>( events: Events<State> ): Events<State> =>
+    Object.keys( events ).reduce( ( result, event ) =>
+            !GLOBAL_EVENTS.includes( event )
+                ? result
+                : { ... result, [event]: events[event] }
+        , { } );
+
+
 abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     protected _state: State;
     private _render: Render<State>;
     protected _root;
     private _emit?: EmitRecord<State>[];
+    private _globalEvents: Events<State> = {};
 
     constructor( args: Args<State, Props>, stylesheet?: string ) {
         super();
@@ -52,7 +71,8 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             this._connectMutationObserver( args.domchange );
         }
         if ( args.events ) {
-            this._bindEvents( args.events, shadowdom );
+            this._bindEvents( localEvents( args.events ), shadowdom );
+            this._globalEvents = globalEvents( args.events );
         }
         if ( args.props ) {
             this._defineProps( args.props );
@@ -93,6 +113,23 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
         Object.keys( events ).forEach( eventName => {
             shadowdom.addEventListener( eventName, eventHandler, true )
+        } );
+    }
+
+    globalEventHandler( event: Event ) {
+        const handler = this._globalEvents[event.type];
+        this._changeState( handler( this._state, event ) );
+    }
+
+    connectedCallback() {
+        Object.keys( this._globalEvents ).forEach( eventName => {
+            window.addEventListener( eventName, this.globalEventHandler, true )
+        } );
+    }
+
+    disconnectedCallback() {
+        Object.keys( this._globalEvents ).forEach( eventName => {
+            window.removeEventListener( eventName, this.globalEventHandler, true )
         } );
     }
 
