@@ -36,6 +36,7 @@ class _Component extends HTMLElement {
             this._defineProps(args.props);
         }
         this._emit = args.emit;
+        this._globalEventHandler = this._globalEventHandler.bind(this);
     }
     _defineProps(props) {
         const $this = this;
@@ -66,18 +67,18 @@ class _Component extends HTMLElement {
             shadowdom.addEventListener(eventName, eventHandler, true);
         });
     }
-    globalEventHandler(event) {
+    _globalEventHandler(event) {
         const handler = this._globalEvents[event.type];
         this._changeState(handler(this._state, event));
     }
     connectedCallback() {
         Object.keys(this._globalEvents).forEach(eventName => {
-            window.addEventListener(eventName, this.globalEventHandler, true);
+            window.addEventListener(eventName, this._globalEventHandler, true);
         });
     }
     disconnectedCallback() {
         Object.keys(this._globalEvents).forEach(eventName => {
-            window.removeEventListener(eventName, this.globalEventHandler, true);
+            window.removeEventListener(eventName, this._globalEventHandler, true);
         });
     }
     _connectMutationObserver(handler) {
