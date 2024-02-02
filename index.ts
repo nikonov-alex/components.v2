@@ -21,7 +21,8 @@ type Args<State, Props extends {}> = {
     domchange?: MutationHandler<State>,
     events?: Events<State>,
     emit?: EmitRecord<State>[],
-    props?: { [prop in keyof Props]: Prop<State, Props[prop]> }
+    props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
+    debug?: boolean
 };
 
 
@@ -49,6 +50,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     protected _root;
     private _emit?: EmitRecord<State>[];
     private _globalEvents: Events<State> = {};
+    private _debug: boolean;
 
     constructor( args: Args<State, Props>, stylesheet?: string ) {
         super();
@@ -79,6 +81,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         }
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind( this );
+        this._debug = !!args.debug;
     }
 
 
@@ -182,6 +185,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._state = newState;
         this._redraw();
         this._maybeEmitEvents( oldState );
+        if ( this._debug ) {
+            console.log( "nikonov-components: transition from", oldState, "to", this._state );
+        }
     }
 
 }

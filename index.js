@@ -37,6 +37,7 @@ class _Component extends HTMLElement {
         }
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind(this);
+        this._debug = !!args.debug;
     }
     _defineProps(props) {
         const $this = this;
@@ -124,6 +125,9 @@ class _Component extends HTMLElement {
         this._state = newState;
         this._redraw();
         this._maybeEmitEvents(oldState);
+        if (this._debug) {
+            console.log("nikonov-components: transition from", oldState, "to", this._state);
+        }
     }
 }
 const Component = _Component;
