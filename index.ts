@@ -106,7 +106,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     private _bindEvents( events: Events<State>, shadowdom: ShadowRoot ) {
         const eventHandler = ( event: Event ) => {
-            if ( [ "submit", "click" ].includes( event.type ) ) {
+            if ( [ "submit" ].includes( event.type ) ) {
                 event.preventDefault();
             }
             event.stopImmediatePropagation();

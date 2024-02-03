@@ -57,7 +57,7 @@ class _Component extends HTMLElement {
     }
     _bindEvents(events, shadowdom) {
         const eventHandler = (event) => {
-            if (["submit", "click"].includes(event.type)) {
+            if (["submit"].includes(event.type)) {
                 event.preventDefault();
             }
             event.stopImmediatePropagation();
