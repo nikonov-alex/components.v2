@@ -11,6 +11,7 @@ class _Component extends HTMLElement {
     constructor(args, stylesheet) {
         super();
         this._globalEvents = {};
+        this._deferredRedraw = false;
         this._state = args.initialState;
         this._render = args.render;
         this._root = this._render(this._state);
@@ -123,7 +124,13 @@ class _Component extends HTMLElement {
     _changeState(newState) {
         const oldState = this._state;
         this._state = newState;
-        this._redraw();
+        if (!this._deferredRedraw) {
+            setTimeout(() => {
+                this._redraw();
+                this._deferredRedraw = false;
+            }, 0);
+            this._deferredRedraw = true;
+        }
         this._maybeEmitEvents(oldState);
         if (this._debug) {
             console.log("nikonov-components: transition from", oldState, "to", this._state);
