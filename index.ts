@@ -183,6 +183,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     }
 
     protected _changeState( newState: State ) {
+        if ( this._state === newState ) {
+            return;
+        }
         const oldState = this._state;
         this._state = newState;
         if ( !this._deferredRedraw ) {

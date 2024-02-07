@@ -122,6 +122,9 @@ class _Component extends HTMLElement {
         }
     }
     _changeState(newState) {
+        if (this._state === newState) {
+            return;
+        }
         const oldState = this._state;
         this._state = newState;
         if (!this._deferredRedraw) {
