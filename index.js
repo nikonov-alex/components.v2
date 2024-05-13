@@ -8,7 +8,7 @@ const globalEvents = (events) => Object.keys(events).reduce((result, event) => !
     ? result
     : Object.assign(Object.assign({}, result), { [event]: events[event] }), {});
 class _Component extends HTMLElement {
-    constructor(args, stylesheet) {
+    constructor(args, styles) {
         super();
         this._globalEvents = {};
         this._deferredRedraw = false;
@@ -20,11 +20,18 @@ class _Component extends HTMLElement {
             delegatesFocus: true
         });
         shadowdom.appendChild(this._root);
-        if (stylesheet) {
-            const link = document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = stylesheet;
-            shadowdom.appendChild(link);
+        if (styles) {
+            if ("url" in styles) {
+                const link = document.createElement("link");
+                link.rel = "stylesheet";
+                link.href = styles.url;
+                shadowdom.appendChild(link);
+            }
+            else {
+                const st = document.createElement("style");
+                st.innerText = styles.css;
+                shadowdom.appendChild(st);
+            }
         }
         if (args.domchange) {
             this._connectMutationObserver(args.domchange);
@@ -142,8 +149,8 @@ class _Component extends HTMLElement {
 }
 const Component = _Component;
 class _FormComponent extends _Component {
-    constructor(args, stylesheet) {
-        super(args, stylesheet);
+    constructor(args, styles) {
+        super(args, styles);
         this._internals = this.attachInternals();
         this._formValue = args.formValue;
         this._validate = args.validate;

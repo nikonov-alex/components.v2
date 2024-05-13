@@ -42,6 +42,8 @@ const globalEvents = <State>( events: Events<State> ): Events<State> =>
                 : { ... result, [event]: events[event] }
         , { } );
 
+type Styles = { url: string } | { css: string };
+
 
 abstract class _Component<State, Props extends {}> extends HTMLElement {
 
@@ -54,7 +56,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     private _deferredRedraw = false;
 
-    constructor( args: Args<State, Props>, stylesheet?: string ) {
+    constructor( args: Args<State, Props>, styles?: Styles ) {
         super();
         this._state = args.initialState;
         this._render = args.render;
@@ -65,11 +67,18 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             delegatesFocus: true
         } );
         shadowdom.appendChild( this._root );
-        if ( stylesheet ) {
-            const link = document.createElement( "link" );
-            link.rel = "stylesheet";
-            link.href = stylesheet;
-            shadowdom.appendChild( link );
+        if ( styles ) {
+            if ( "url" in styles ) {
+                const link = document.createElement( "link" );
+                link.rel = "stylesheet";
+                link.href = styles.url;
+                shadowdom.appendChild( link );
+            }
+            else {
+                const st = document.createElement( "style" );
+                st.innerText = styles.css;
+                shadowdom.appendChild( st );
+            }
         }
         if ( args.domchange ) {
             this._connectMutationObserver( args.domchange );
@@ -223,8 +232,8 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
     private _formValue;
     private _validate?: ValidateFunc<State>;
 
-    constructor( args: FormComponentArgs<State, Props>, stylesheet?: string ) {
-        super( args, stylesheet );
+    constructor( args: FormComponentArgs<State, Props>, styles?: Styles ) {
+        super( args, styles );
         this._internals = this.attachInternals();
         this._formValue = args.formValue;
         this._validate = args.validate;
