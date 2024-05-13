@@ -214,7 +214,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
 
 type Component<State, Props extends {}> = Props & _Component<State, Props>;
-const Component: new <State, Props extends {}>( args: Args<State, Props>, stylesheet?: string ) => Component<State, Props> = _Component as any
+const Component: new <State, Props extends {}>( args: Args<State, Props>, styles?: Styles ) => Component<State, Props> = _Component as any
 
 
 
@@ -273,7 +273,7 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
 
 
 type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Props>;
-const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, stylesheet?: string ) => FormComponent<State, Props> = _FormComponent as any
+const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, styles?: Styles ) => FormComponent<State, Props> = _FormComponent as any
 
 
 export { Component, FormComponent, Styles };
