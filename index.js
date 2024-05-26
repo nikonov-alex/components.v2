@@ -20,6 +20,7 @@ class _Component extends HTMLElement {
             delegatesFocus: true
         });
         shadowdom.appendChild(this._root);
+        this._maybePostRender();
         if (styles) {
             if ("url" in styles) {
                 const link = document.createElement("link");
@@ -46,6 +47,11 @@ class _Component extends HTMLElement {
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind(this);
         this._debug = !!args.debug;
+    }
+    _maybePostRender() {
+        if (this._postRender) {
+            this._postRender(this._state, this._root)();
+        }
     }
     _defineProps(props) {
         const $this = this;
@@ -111,6 +117,7 @@ class _Component extends HTMLElement {
         else {
             morphdom(this._root, rendered);
         }
+        this._maybePostRender();
     }
     _maybeEmitEvents(oldState) {
         if (this._emit) {
