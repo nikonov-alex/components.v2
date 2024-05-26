@@ -4,7 +4,6 @@ type Render<State> = { ( s: State ): HTMLElement };
 type EventHandler<State> = { ( s: State, e: Event ): State };
 type Events<State> = { [name: string]: EventHandler<State> };
 type MutationHandler<State> = { ( s: State, elem: HTMLElement ): State };
-type PostRenderHandler<State> = { ( s: State, elem: HTMLElement ): { (): void } };
 
 type EmitPredicate<State> = { ( os: State, ns: State ): boolean };
 type EventEmitter<State> = { ( s: State ): Event };
@@ -23,8 +22,7 @@ type Args<State, Props extends {}> = {
     events?: Events<State>,
     emit?: EmitRecord<State>[],
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
-    debug?: boolean,
-    postRender?: PostRenderHandler<State>
+    debug?: boolean
 };
 
 
@@ -55,7 +53,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _emit?: EmitRecord<State>[];
     private _globalEvents: Events<State> = {};
     private _debug: boolean;
-    private _postRender?: PostRenderHandler<State>;
 
     private _deferredRedraw = false;
 
@@ -70,7 +67,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             delegatesFocus: true
         } );
         shadowdom.appendChild( this._root );
-        this._maybePostRender();
         if ( styles ) {
             if ( "url" in styles ) {
                 const link = document.createElement( "link" );
@@ -99,11 +95,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._debug = !!args.debug;
     }
 
-    private _maybePostRender() {
-        if ( this._postRender ) {
-            this._postRender( this._state, this._root )();
-        }
-    }
 
     private _defineProps( props: { [prop: string]: Prop<State, any> } ) {
         const $this = this;
@@ -181,7 +172,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         else {
             morphdom( this._root, rendered );
         }
-        this._maybePostRender();
     }
 
     private _maybeEmitEvents( oldState: State ) {
