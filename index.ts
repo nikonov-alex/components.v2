@@ -64,6 +64,8 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
         const shadowdom = this.attachShadow( {
             mode: "closed",
+            //@ts-ignore
+            clonable: true,
             delegatesFocus: true
         } );
         shadowdom.appendChild( this._root );

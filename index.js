@@ -17,6 +17,8 @@ class _Component extends HTMLElement {
         this._root = this._render(this._state);
         const shadowdom = this.attachShadow({
             mode: "closed",
+            //@ts-ignore
+            clonable: true,
             delegatesFocus: true
         });
         shadowdom.appendChild(this._root);
