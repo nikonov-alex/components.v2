@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "./",
+    "outDir": "./build",
     "skipLibCheck": true,
     "module": "es6",
     "moduleResolution": "node",
@@ -21,6 +21,6 @@
     "baseUrl": "./",
   },
   "files": [
-    "./index.ts",
+    "./sources/index.ts",
   ]
 }

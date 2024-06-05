@@ -30,10 +30,10 @@ const GLOBAL_EVENTS = [ "hashchange", "popstate" ];
 
 const localEvents = <State>( events: Events<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) =>
-        GLOBAL_EVENTS.includes( event )
-            ? result
-            : { ... result, [event]: events[event] }
-    , { } );
+            GLOBAL_EVENTS.includes( event )
+                ? result
+                : { ... result, [event]: events[event] }
+        , { } );
 
 const globalEvents = <State>( events: Events<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) =>
@@ -245,15 +245,15 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
     private _validityDiffers( flags: ValidityStateFlags ) {
         const validity = this._internals.validity;
         return validity.valueMissing !== ( flags.valueMissing ?? false ) ||
-        validity.stepMismatch !== ( flags.stepMismatch ?? false ) ||
-        validity.badInput !== ( flags.badInput ?? false ) ||
-        validity.customError !== ( flags.customError ?? false ) ||
-        validity.patternMismatch !== ( flags.patternMismatch ?? false ) ||
-        validity.rangeOverflow !== ( flags.rangeOverflow ?? false ) ||
-        validity.rangeUnderflow !== ( flags.rangeUnderflow ?? false ) ||
-        validity.tooLong !== ( flags.tooLong ?? false ) ||
-        validity.tooShort !== ( flags.tooShort ?? false ) ||
-        validity.typeMismatch !== ( flags.typeMismatch ?? false );
+            validity.stepMismatch !== ( flags.stepMismatch ?? false ) ||
+            validity.badInput !== ( flags.badInput ?? false ) ||
+            validity.customError !== ( flags.customError ?? false ) ||
+            validity.patternMismatch !== ( flags.patternMismatch ?? false ) ||
+            validity.rangeOverflow !== ( flags.rangeOverflow ?? false ) ||
+            validity.rangeUnderflow !== ( flags.rangeUnderflow ?? false ) ||
+            validity.tooLong !== ( flags.tooLong ?? false ) ||
+            validity.tooShort !== ( flags.tooShort ?? false ) ||
+            validity.typeMismatch !== ( flags.typeMismatch ?? false );
     }
 
     private _maybeValidate() {
