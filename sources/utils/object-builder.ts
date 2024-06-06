@@ -37,7 +37,15 @@ const required = <O extends { [k: string]: any }, K extends string, V, B>(
         ? value
         : update( obj, key, value, callback );
 
+const ifTrue = <A, B, C>(
+    condition: boolean,
+    obj: A,
+    then: { ( v: A ): B },
+    callback: { ( v: A | B ): C }
+) =>
+    callback( condition ? then( obj ) : obj );
 
 
 
-export { update, required, optional };
+
+export { update, required, optional, ifTrue };
