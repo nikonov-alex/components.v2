@@ -44,7 +44,13 @@ const ifTrue = <A, B>(
 ) =>
     condition ? then( obj ) : obj;
 
+const ifNotError = <A, B>(
+    obj: A | Error,
+    then: { ( v: A ): B }
+) =>
+    obj instanceof Error
+        ? obj
+        : then( obj );
 
 
-
-export { update, required, optional, ifTrue };
+export { update, required, optional, ifTrue, ifNotError };
