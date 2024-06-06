@@ -3,7 +3,7 @@ import morphdom from "morphdom";
 type Render<State> = { ( s: State ): HTMLElement };
 type EventHandler<State> = { ( s: State, e: Event, w: Window ): State };
 type Events<State> = { [name: string]: EventHandler<State> };
-type MutationHandler<State> = { ( s: State, elem: HTMLElement ): State };
+type MutationHandler<State> = { ( s: State, elem: HTMLElement, w: Window ): State };
 
 type EmitPredicate<State> = { ( os: State, ns: State ): boolean };
 type EventEmitter<State> = { ( s: State ): Event };
@@ -153,7 +153,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     private _connectMutationObserver( handler: MutationHandler<State> ) {
         const domchanged = ( changes: MutationRecord[] ) => {
-            this._changeState( handler( this._state, this ) );
+            this._changeState( handler( this._state, this, window ) );
         };
 
         const observer = new MutationObserver( domchanged );

@@ -1,6 +1,6 @@
 {
   "name": "@nikonov-alex/components.v2",
-  "version": "0.0.46",
+  "version": "0.0.47",
   "description": "Components library inspired by HTDP book",
   "main": "build/index.js",
   "types": "sources/index.ts",
