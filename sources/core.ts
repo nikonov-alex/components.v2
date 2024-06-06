@@ -1,7 +1,7 @@
 import morphdom from "morphdom";
 
 type Render<State> = { ( s: State ): HTMLElement };
-type EventHandler<State> = { ( s: State, e: Event ): State };
+type EventHandler<State> = { ( s: State, e: Event, w: Window ): State };
 type Events<State> = { [name: string]: EventHandler<State> };
 type MutationHandler<State> = { ( s: State, elem: HTMLElement ): State };
 
@@ -125,7 +125,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             event.stopImmediatePropagation();
 
             const handler = events[event.type];
-            this._changeState( handler( this._state, event ) );
+            this._changeState( handler( this._state, event, window ) );
         }
 
         Object.keys( events ).forEach( eventName => {
@@ -135,7 +135,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     _globalEventHandler( event: Event ) {
         const handler = this._globalEvents[event.type];
-        this._changeState( handler( this._state, event ) );
+        this._changeState( handler( this._state, event, window ) );
     }
 
     connectedCallback() {
