@@ -41,7 +41,7 @@ const ifTrue = <A, B>(
     condition: boolean,
     obj: A,
     then: { ( v: A ): B }
-) =>
+): A | B =>
     condition ? then( obj ) : obj;
 
 const ifNotError = <A, B>(
