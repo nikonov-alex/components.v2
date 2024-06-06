@@ -1,9 +1,11 @@
 import morphdom from "morphdom";
 
+type World = Window;
+
 type Render<State> = { ( s: State ): HTMLElement };
-type EventHandler<State> = { ( s: State, e: Event, w: Window ): State };
+type EventHandler<State> = { ( s: State, e: Event, w: World ): State };
 type Events<State> = { [name: string]: EventHandler<State> };
-type MutationHandler<State> = { ( s: State, elem: HTMLElement, w: Window ): State };
+type MutationHandler<State> = { ( s: State, elem: HTMLElement, w: World ): State };
 
 type EmitPredicate<State> = { ( os: State, ns: State ): boolean };
 type EventEmitter<State> = { ( s: State ): Event };
@@ -16,7 +18,7 @@ const has_getter = <State, T>( prop: Prop<State, T> ): prop is Getter<State, T> 
     "get" in prop;
 
 type Args<State, Props extends {}> = {
-    initialState: State,
+    initialState: State | {( w: World ): State},
     render: Render<State>,
     domchange?: MutationHandler<State>,
     events?: Events<State>,
@@ -24,6 +26,9 @@ type Args<State, Props extends {}> = {
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
     debug?: boolean
 };
+
+const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} =>
+    typeof value === "function";
 
 
 const GLOBAL_EVENTS = [ "hashchange", "popstate" ];
@@ -58,7 +63,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     constructor( args: Args<State, Props>, styles?: Styles ) {
         super();
-        this._state = args.initialState;
+        this._state = isInitialFunc( args.initialState )
+            ? args.initialState( window )
+            : args.initialState;
         this._render = args.render;
         this._root = this._render( this._state );
 
@@ -278,4 +285,4 @@ type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Prop
 const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, styles?: Styles ) => FormComponent<State, Props> = _FormComponent as any
 
 
-export { Component, FormComponent, Styles };
+export { Component, FormComponent, Styles, World };
