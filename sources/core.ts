@@ -47,7 +47,7 @@ const globalEvents = <State>( events: Events<State> ): Events<State> =>
                 : { ... result, [event]: events[event] }
         , { } );
 
-type Styles = { url: string } | { css: string };
+type Styles = { url: string } | { stylesheet: CSSStyleSheet };
 
 
 abstract class _Component<State, Props extends {}> extends HTMLElement {
@@ -84,9 +84,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
                 shadowdom.appendChild( link );
             }
             else {
-                const st = document.createElement( "style" );
-                st.innerText = styles.css;
-                shadowdom.appendChild( st );
+                shadowdom.adoptedStyleSheets = [ styles.stylesheet ];
             }
         }
         if ( args.domchange ) {
