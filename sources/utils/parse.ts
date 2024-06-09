@@ -1,4 +1,4 @@
-import { Types } from "@nikonov-alex/functional-library";
+import { Types, Maybe } from "@nikonov-alex/functional-library";
 
 export const boolean = ( elem: HTMLElement, attribName: string ): Types.Maybe<boolean> =>
     elem.hasAttribute( attribName )
@@ -13,3 +13,11 @@ export const number = ( elem: HTMLElement, attribName: string ): Types.Maybe<num
                     ? false : value
         )( parseFloat( elem.getAttribute( attribName ) as string ) )
         : false;
+
+export const int = ( elem: HTMLElement, attribName: string ): Types.Maybe<number> =>
+    Maybe.ifNotFalse( number( elem, attribName ),
+    number => Number.isInteger( number ) ? number : false );
+
+export const positiveInt = ( elem: HTMLElement, attribName: string ): Types.Maybe<number> =>
+    Maybe.ifNotFalse( int( elem, attribName ),
+        number => number > 0 ? number : false );
