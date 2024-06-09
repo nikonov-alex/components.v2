@@ -11,5 +11,5 @@ export const number = ( elem: HTMLElement, attribName: string ): Types.Maybe<num
         ? ( value =>
                 Number.isNaN( value )
                     ? false : value
-        )( parseInt( elem.getAttribute( attribName ) as string, 10 ) )
+        )( parseFloat( elem.getAttribute( attribName ) as string ) )
         : false;
