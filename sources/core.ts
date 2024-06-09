@@ -17,9 +17,12 @@ type Prop<State, T> = Getter<State, T> | Setter<State, T> | Getter<State, T> & S
 const has_getter = <State, T>( prop: Prop<State, T> ): prop is Getter<State, T> =>
     "get" in prop;
 
+type ViewUpdated<State> = { ( state: State, elem: HTMLElement ): State };
+
 type Args<State, Props extends {}> = {
     initialState: State | {( w: World ): State},
     render: Render<State>,
+    viewupdated?: ViewUpdated<State>,
     domchange?: MutationHandler<State>,
     events?: Events<State>,
     emit?: EmitRecord<State>[],
@@ -60,6 +63,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _debug: boolean;
 
     private _deferredRedraw = false;
+    private _viewupdated?: ViewUpdated<State>;
 
     constructor( args: Args<State, Props>, styles?: Styles ) {
         super();
@@ -67,6 +71,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             ? args.initialState( window )
             : args.initialState;
         this._render = args.render;
+        this._viewupdated = args.viewupdated;
         this._root = this._render( this._state );
 
         const shadowdom = this.attachShadow( {
@@ -100,6 +105,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind( this );
         this._debug = !!args.debug;
+        if ( this._viewupdated ) {
+            this._changeState( this._viewupdated( this._state, this._root ) );
+        }
     }
 
 
@@ -172,6 +180,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     private _redraw() {
         const rendered = this._render( this._state );
+        if ( this._root.isEqualNode( rendered ) ) {
+            return;
+        }
         if ( this._root.nodeName !== rendered.nodeName ) {
             this._root.replaceWith( rendered );
             this._root = rendered;
@@ -181,6 +192,9 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
                 onBeforeElUpdated: ( fromEl, toEl ) =>
                     !fromEl.isEqualNode( toEl )
             } );
+        }
+        if ( this._viewupdated ) {
+            this._changeState( this._viewupdated( this._state, this._root ) );
         }
     }
 
