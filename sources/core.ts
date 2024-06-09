@@ -177,7 +177,10 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             this._root = rendered;
         }
         else {
-            morphdom( this._root, rendered );
+            morphdom( this._root, rendered, {
+                onBeforeElUpdated: ( fromEl, toEl ) =>
+                    !fromEl.isEqualNode( toEl )
+            } );
         }
     }
 
