@@ -87,6 +87,10 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             delegatesFocus: true
         } );
 
+        if ( this._domchange ) {
+            this._connectMutationObserver( this._domchange );
+        }
+
         if ( args.events ) {
             this._globalEvents = globalEvents( args.events );
             this._localEvents = localEvents( args.events );
@@ -143,10 +147,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     connectedCallback() {
         this._root = this._render( this._state );
         this._shadowdom.appendChild( this._root );
-
-        if ( this._domchange ) {
-            this._connectMutationObserver( this._domchange );
-        }
 
         if ( this._styles ) {
             if ( "url" in this._styles ) {
