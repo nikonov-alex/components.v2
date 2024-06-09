@@ -60,10 +60,14 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     protected _root;
     private _emit?: EmitRecord<State>[];
     private _globalEvents: Events<State> = {};
+    private _localEvents: Events<State> = {};
     private _debug: boolean;
 
     private _deferredRedraw = false;
     private _viewupdated?: ViewUpdated<State>;
+    private _styles?: Styles;
+    private _domchange?: MutationHandler<State>;
+    private _shadowdom: ShadowRoot;
 
     constructor( args: Args<State, Props>, styles?: Styles ) {
         super();
@@ -72,32 +76,20 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             : args.initialState;
         this._render = args.render;
         this._viewupdated = args.viewupdated;
-        this._root = this._render( this._state );
+        this._root = document.createElement( "span" );
+        this._styles = styles;
+        this._domchange = args.domchange;
 
-        const shadowdom = this.attachShadow( {
+        this._shadowdom = this.attachShadow( {
             mode: "closed",
             //@ts-ignore
             clonable: true,
             delegatesFocus: true
         } );
-        shadowdom.appendChild( this._root );
-        if ( styles ) {
-            if ( "url" in styles ) {
-                const link = document.createElement( "link" );
-                link.rel = "stylesheet";
-                link.href = styles.url;
-                shadowdom.appendChild( link );
-            }
-            else {
-                shadowdom.adoptedStyleSheets = [ styles.stylesheet ];
-            }
-        }
-        if ( args.domchange ) {
-            this._connectMutationObserver( args.domchange );
-        }
+
         if ( args.events ) {
-            this._bindEvents( localEvents( args.events ), shadowdom );
             this._globalEvents = globalEvents( args.events );
+            this._localEvents = localEvents( args.events );
         }
         if ( args.props ) {
             this._defineProps( args.props );
@@ -105,9 +97,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind( this );
         this._debug = !!args.debug;
-        if ( this._viewupdated ) {
-            this._changeState( this._viewupdated( this._state, this._root ) );
-        }
     }
 
 
@@ -152,12 +141,40 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     }
 
     connectedCallback() {
+        this._root = this._render( this._state );
+        this._shadowdom.appendChild( this._root );
+
+        if ( this._domchange ) {
+            this._connectMutationObserver( this._domchange );
+        }
+
+        if ( this._styles ) {
+            if ( "url" in this._styles ) {
+                const link = document.createElement( "link" );
+                link.rel = "stylesheet";
+                link.href = this._styles.url;
+                this._shadowdom.appendChild( link );
+            }
+            else {
+                this._shadowdom.adoptedStyleSheets = [ this._styles.stylesheet ];
+            }
+        }
+
+        this._bindEvents( this._localEvents, this._shadowdom );
+
         Object.keys( this._globalEvents ).forEach( eventName => {
             window.addEventListener( eventName, this._globalEventHandler, true )
         } );
+
+        if ( this._viewupdated ) {
+            this._changeState( this._viewupdated( this._state, this._root ) );
+        }
     }
 
     disconnectedCallback() {
+        this._shadowdom.innerHTML = "";
+        this._shadowdom.adoptedStyleSheets = [];
+
         Object.keys( this._globalEvents ).forEach( eventName => {
             window.removeEventListener( eventName, this._globalEventHandler, true )
         } );
