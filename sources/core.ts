@@ -68,6 +68,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _styles?: Styles;
     private _domchange?: MutationHandler<State>;
     private _shadowdom: ShadowRoot;
+    private _connected: boolean = false;
 
     constructor( args: Args<State, Props>, styles?: Styles ) {
         super();
@@ -166,12 +167,14 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             window.addEventListener( eventName, this._globalEventHandler, true )
         } );
 
+        this._connected = true;
         if ( this._viewupdated ) {
             this._changeState( this._viewupdated( this._state, this._root ) );
         }
     }
 
     disconnectedCallback() {
+        this._connected = false;
         this._shadowdom.innerHTML = "";
         this._shadowdom.adoptedStyleSheets = [];
 
@@ -196,6 +199,10 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     }
 
     private _redraw() {
+        if ( !this._connected ) {
+            return;
+        }
+
         const rendered = this._render( this._state );
         if ( this._root.isEqualNode( rendered ) ) {
             return;
