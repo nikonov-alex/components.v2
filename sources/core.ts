@@ -50,8 +50,6 @@ const globalEvents = <State>( events: Events<State> ): Events<State> =>
                 : { ... result, [event]: events[event] }
         , { } );
 
-type Styles = { url: string } | { stylesheet: CSSStyleSheet };
-
 
 abstract class _Component<State, Props extends {}> extends HTMLElement {
 
@@ -65,12 +63,13 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     private _deferredRedraw = false;
     private _viewupdated?: ViewUpdated<State>;
-    private _styles?: Styles;
+    private _styles?: CSSStyleSheet;
     private _domchange?: MutationHandler<State>;
     private _shadowdom: ShadowRoot;
-    private _connected: boolean = false;
+    protected _connected: boolean = false;
+    private _domchangeObserver?: MutationObserver;
 
-    constructor( args: Args<State, Props>, styles?: Styles ) {
+    constructor( args: Args<State, Props>, styles?: CSSStyleSheet ) {
         super();
         this._state = isInitialFunc( args.initialState )
             ? args.initialState( window )
@@ -88,10 +87,6 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
             delegatesFocus: true
         } );
 
-        if ( this._domchange ) {
-            this._connectMutationObserver( this._domchange );
-        }
-
         if ( args.events ) {
             this._globalEvents = globalEvents( args.events );
             this._localEvents = localEvents( args.events );
@@ -101,6 +96,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         }
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind( this );
+        this._localEventHandler = this._localEventHandler.bind( this );
         this._debug = !!args.debug;
     }
 
@@ -123,21 +119,14 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         }
     }
 
-
-    private _bindEvents( events: Events<State>, shadowdom: ShadowRoot ) {
-        const eventHandler = ( event: Event ) => {
-            if ( [ "submit" ].includes( event.type ) ) {
-                event.preventDefault();
-            }
-            event.stopImmediatePropagation();
-
-            const handler = events[event.type];
-            this._changeState( handler( this._state, event, window ) );
+    _localEventHandler( event: Event ) {
+        if ( [ "submit" ].includes( event.type ) ) {
+            event.preventDefault();
         }
+        event.stopImmediatePropagation();
 
-        Object.keys( events ).forEach( eventName => {
-            shadowdom.addEventListener( eventName, eventHandler, true )
-        } );
+        const handler = this._localEvents[event.type];
+        this._changeState( handler( this._state, event, window ) );
     }
 
     _globalEventHandler( event: Event ) {
@@ -146,22 +135,22 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     }
 
     connectedCallback() {
+        if ( this._domchange ) {
+            this._connectMutationObserver( this._domchange );
+            // first call after parse or insert
+            this._changeState( this._domchange( this._state, this, window ) );
+        }
+
         this._root = this._render( this._state );
         this._shadowdom.appendChild( this._root );
 
         if ( this._styles ) {
-            if ( "url" in this._styles ) {
-                const link = document.createElement( "link" );
-                link.rel = "stylesheet";
-                link.href = this._styles.url;
-                this._shadowdom.appendChild( link );
-            }
-            else {
-                this._shadowdom.adoptedStyleSheets = [ this._styles.stylesheet ];
-            }
+            this._shadowdom.adoptedStyleSheets = [ this._styles ];
         }
 
-        this._bindEvents( this._localEvents, this._shadowdom );
+        Object.keys( this._localEvents ).forEach( eventName => {
+            this._shadowdom.addEventListener( eventName, this._localEventHandler, true )
+        } );
 
         Object.keys( this._globalEvents ).forEach( eventName => {
             window.addEventListener( eventName, this._globalEventHandler, true )
@@ -177,6 +166,13 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._connected = false;
         this._shadowdom.innerHTML = "";
         this._shadowdom.adoptedStyleSheets = [];
+        this._root = document.createElement( "span" );
+
+        this._maybeDisconnectMutationObserver();
+
+        Object.keys( this._localEvents ).forEach( eventName => {
+            this._shadowdom.removeEventListener( eventName, this._localEventHandler, true )
+        } );
 
         Object.keys( this._globalEvents ).forEach( eventName => {
             window.removeEventListener( eventName, this._globalEventHandler, true )
@@ -185,17 +181,25 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
 
     private _connectMutationObserver( handler: MutationHandler<State> ) {
-        const domchanged = ( changes: MutationRecord[] ) => {
-            this._changeState( handler( this._state, this, window ) );
-        };
+        if ( !this._domchangeObserver ) {
+            const domchanged = (changes: MutationRecord[]) => {
+                this._changeState(handler(this._state, this, window));
+            };
 
-        const observer = new MutationObserver( domchanged );
-        observer.observe( this, {
+            this._domchangeObserver = new MutationObserver(domchanged);
+        }
+        this._domchangeObserver.observe( this, {
             subtree: true,
             childList: true,
             attributes: true,
             characterData: true
         } );
+    }
+
+    private _maybeDisconnectMutationObserver() {
+        if ( this._domchangeObserver ) {
+            this._domchangeObserver.disconnect();
+        }
     }
 
     private _redraw() {
@@ -262,7 +266,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
 
 type Component<State, Props extends {}> = Props & _Component<State, Props>;
-const Component: new <State, Props extends {}>( args: Args<State, Props>, styles?: Styles ) => Component<State, Props> = _Component as any
+const Component: new <State, Props extends {}>( args: Args<State, Props>, styles?: CSSStyleSheet ) => Component<State, Props> = _Component as any
 
 
 
@@ -280,7 +284,7 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
     private _formValue;
     private _validate?: ValidateFunc<State>;
 
-    constructor( args: FormComponentArgs<State, Props>, styles?: Styles ) {
+    constructor( args: FormComponentArgs<State, Props>, styles?: CSSStyleSheet ) {
         super( args, styles );
         this._internals = this.attachInternals();
         this._formValue = args.formValue;
@@ -303,7 +307,7 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
     }
 
     private _maybeValidate() {
-        if ( this._validate ) {
+        if ( this._connected && this._validate ) {
             const [ flags, message ] = this._validate( this._state );
             if ( this._validityDiffers( flags ) ) {
                 this._internals.setValidity( flags, message, this._root );
@@ -321,7 +325,7 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
 
 
 type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Props>;
-const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, styles?: Styles ) => FormComponent<State, Props> = _FormComponent as any
+const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, styles?: CSSStyleSheet ) => FormComponent<State, Props> = _FormComponent as any
 
 
-export { Component, FormComponent, Styles, World };
+export { Component, FormComponent };
