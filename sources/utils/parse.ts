@@ -1,4 +1,4 @@
-import { Types, Maybe } from "@nikonov-alex/functional-library";
+import { Types, Maybe, Cycle } from "@nikonov-alex/functional-library";
 
 export const boolean = ( elem: HTMLElement, attribName: string ): Types.Maybe<boolean> =>
     elem.hasAttribute( attribName )

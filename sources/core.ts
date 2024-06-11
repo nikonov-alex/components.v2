@@ -19,11 +19,16 @@ const has_getter = <State, T>( prop: Prop<State, T> ): prop is Getter<State, T> 
 
 type ViewUpdated<State> = { ( state: State, elem: HTMLElement ): State };
 
+type DOMChange<State> = MutationHandler<State> | {
+    trigger: MutationHandler<State>,
+    options: MutationObserverInit
+};
+
 type Args<State, Props extends {}> = {
     initialState: State | {( w: World ): State},
     render: Render<State>,
     viewupdated?: ViewUpdated<State>,
-    domchange?: MutationHandler<State>,
+    domchange?: DOMChange<State>,
     events?: Events<State>,
     emit?: EmitRecord<State>[],
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
@@ -64,7 +69,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _deferredRedraw = false;
     private _viewupdated?: ViewUpdated<State>;
     private _styles?: CSSStyleSheet;
-    private _domchange?: MutationHandler<State>;
+    private _domchange?: DOMChange<State>;
     private _shadowdom: ShadowRoot;
     protected _connected: boolean = false;
     private _domchangeObserver?: MutationObserver;
@@ -138,7 +143,10 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         if ( this._domchange ) {
             this._connectMutationObserver( this._domchange );
             // first call after parse or insert
-            this._changeState( this._domchange( this._state, this, window ) );
+            const handler = typeof this._domchange === "function"
+                ? this._domchange
+                : this._domchange.trigger;
+            this._changeState( handler( this._state, this, window ) );
         }
 
         this._root = this._render( this._state );
@@ -180,20 +188,27 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     }
 
 
-    private _connectMutationObserver( handler: MutationHandler<State> ) {
+    private _connectMutationObserver( domchange: DOMChange<State> ) {
         if ( !this._domchangeObserver ) {
+            const handler = typeof domchange === "function"
+                ? domchange
+                : domchange.trigger;
             const domchanged = (changes: MutationRecord[]) => {
                 this._changeState(handler(this._state, this, window));
             };
 
             this._domchangeObserver = new MutationObserver(domchanged);
         }
-        this._domchangeObserver.observe( this, {
-            subtree: true,
-            childList: true,
-            attributes: true,
-            characterData: true
-        } );
+        this._domchangeObserver.observe( this,
+            typeof domchange === "function"
+                ? {
+                    subtree: true,
+                    childList: true,
+                    attributes: true,
+                    characterData: true
+                }
+                : domchange.options
+        );
     }
 
     private _maybeDisconnectMutationObserver() {
