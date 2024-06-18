@@ -88,7 +88,12 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._styles = styles;
         this._domchange = args.domchange;
 
-        this._document = "shadow" === args.dommode
+        let dommode = args.dommode;
+        if ( !dommode ) {
+            dommode = "shadow";
+        }
+
+        this._document = "shadow" === dommode
             ? this.attachShadow( {
                 mode: "closed",
                 //@ts-ignore
@@ -96,7 +101,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
                 delegatesFocus: true
             } )
             : this;
-        if ( styles && "light" === args.dommode ) {
+        if ( styles && "light" === dommode ) {
             document.adoptedStyleSheets.push( styles );
         }
 
