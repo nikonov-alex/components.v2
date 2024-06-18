@@ -24,6 +24,8 @@ type DOMChange<State> = MutationHandler<State> | {
     options: MutationObserverInit
 };
 
+type DOMMode = "light" | "shadow";
+
 type Args<State, Props extends {}> = {
     initialState: State | {( w: World ): State},
     render: Render<State>,
@@ -32,7 +34,8 @@ type Args<State, Props extends {}> = {
     events?: Events<State>,
     emit?: EmitRecord<State>[],
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
-    debug?: boolean
+    debug?: boolean,
+    dommode?: DOMMode
 };
 
 const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} =>
@@ -70,7 +73,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _viewupdated?: ViewUpdated<State>;
     private _styles?: CSSStyleSheet;
     private _domchange?: DOMChange<State>;
-    private _shadowdom: ShadowRoot;
+    private _document: ShadowRoot | HTMLElement;
     protected _connected: boolean = false;
     private _domchangeObserver?: MutationObserver;
 
@@ -85,12 +88,17 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._styles = styles;
         this._domchange = args.domchange;
 
-        this._shadowdom = this.attachShadow( {
-            mode: "closed",
-            //@ts-ignore
-            clonable: true,
-            delegatesFocus: true
-        } );
+        this._document = "shadow" === args.dommode
+            ? this.attachShadow( {
+                mode: "closed",
+                //@ts-ignore
+                clonable: true,
+                delegatesFocus: true
+            } )
+            : this;
+        if ( styles && "light" === args.dommode ) {
+            document.adoptedStyleSheets.push( styles );
+        }
 
         if ( args.events ) {
             this._globalEvents = globalEvents( args.events );
@@ -150,14 +158,14 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         }
 
         this._root = this._render( this._state );
-        this._shadowdom.appendChild( this._root );
+        this._document.appendChild( this._root );
 
-        if ( this._styles ) {
-            this._shadowdom.adoptedStyleSheets = [ this._styles ];
+        if ( this._styles && this._document instanceof ShadowRoot ) {
+            this._document.adoptedStyleSheets.push( this._styles );
         }
 
         Object.keys( this._localEvents ).forEach( eventName => {
-            this._shadowdom.addEventListener( eventName, this._localEventHandler, true )
+            this._document.addEventListener( eventName, this._localEventHandler, true )
         } );
 
         Object.keys( this._globalEvents ).forEach( eventName => {
@@ -172,14 +180,16 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
     disconnectedCallback() {
         this._connected = false;
-        this._shadowdom.innerHTML = "";
-        this._shadowdom.adoptedStyleSheets = [];
+        this._document.innerHTML = "";
+        if ( this._document instanceof ShadowRoot ) {
+            this._document.adoptedStyleSheets = [];
+        }
         this._root = document.createElement( "span" );
 
         this._maybeDisconnectMutationObserver();
 
         Object.keys( this._localEvents ).forEach( eventName => {
-            this._shadowdom.removeEventListener( eventName, this._localEventHandler, true )
+            this._document.removeEventListener( eventName, this._localEventHandler, true )
         } );
 
         Object.keys( this._globalEvents ).forEach( eventName => {
