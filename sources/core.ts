@@ -362,4 +362,4 @@ type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Prop
 const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, options?: Options ) => FormComponent<State, Props> = _FormComponent as any
 
 
-export { Component, FormComponent };
+export { Component, FormComponent, Options };
