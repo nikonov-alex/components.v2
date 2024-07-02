@@ -24,8 +24,6 @@ type DOMChange<State> = MutationHandler<State> | {
     options: MutationObserverInit
 };
 
-type DOMMode = "light" | "shadow";
-
 type Args<State, Props extends {}> = {
     initialState: State | {( w: World ): State},
     render: Render<State>,
@@ -33,9 +31,7 @@ type Args<State, Props extends {}> = {
     domchange?: DOMChange<State>,
     events?: Events<State>,
     emit?: EmitRecord<State>[],
-    props?: { [prop in keyof Props]: Prop<State, Props[prop]> },
-    debug?: boolean,
-    dommode?: DOMMode
+    props?: { [prop in keyof Props]: Prop<State, Props[prop]> }
 };
 
 const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} =>
@@ -58,6 +54,14 @@ const globalEvents = <State>( events: Events<State> ): Events<State> =>
                 : { ... result, [event]: events[event] }
         , { } );
 
+type DOMMode = "light" | "shadow";
+
+type Options = {
+    styles?: CSSStyleSheet,
+    dommode?: DOMMode,
+    debug?: boolean
+}
+
 
 abstract class _Component<State, Props extends {}> extends HTMLElement {
 
@@ -77,7 +81,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     protected _connected: boolean = false;
     private _domchangeObserver?: MutationObserver;
 
-    constructor( args: Args<State, Props>, styles?: CSSStyleSheet ) {
+    constructor( args: Args<State, Props>, options?: Options ) {
         super();
         this._state = isInitialFunc( args.initialState )
             ? args.initialState( window )
@@ -85,10 +89,10 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._render = args.render;
         this._viewupdated = args.viewupdated;
         this._root = document.createElement( "span" );
-        this._styles = styles;
+        this._styles = options?.styles;
         this._domchange = args.domchange;
 
-        let dommode = args.dommode;
+        let dommode = options?.dommode;
         if ( !dommode ) {
             dommode = "shadow";
         }
@@ -101,8 +105,8 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
                 delegatesFocus: true
             } )
             : this;
-        if ( styles && "light" === dommode ) {
-            document.adoptedStyleSheets.push( styles );
+        if ( options?.styles && "light" === dommode ) {
+            document.adoptedStyleSheets.push( options.styles );
         }
 
         if ( args.events ) {
@@ -115,7 +119,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         this._emit = args.emit;
         this._globalEventHandler = this._globalEventHandler.bind( this );
         this._localEventHandler = this._localEventHandler.bind( this );
-        this._debug = !!args.debug;
+        this._debug = !!options?.debug;
     }
 
 
@@ -296,7 +300,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
 
 
 type Component<State, Props extends {}> = Props & _Component<State, Props>;
-const Component: new <State, Props extends {}>( args: Args<State, Props>, styles?: CSSStyleSheet ) => Component<State, Props> = _Component as any
+const Component: new <State, Props extends {}>( args: Args<State, Props>, options?: Options ) => Component<State, Props> = _Component as any
 
 
 
@@ -314,8 +318,8 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
     private _formValue;
     private _validate?: ValidateFunc<State>;
 
-    constructor( args: FormComponentArgs<State, Props>, styles?: CSSStyleSheet ) {
-        super( args, styles );
+    constructor( args: FormComponentArgs<State, Props>, options?: Options ) {
+        super( args, options );
         this._internals = this.attachInternals();
         this._formValue = args.formValue;
         this._validate = args.validate;
@@ -355,7 +359,7 @@ abstract class _FormComponent<State, Props extends {}> extends _Component<State,
 
 
 type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Props>;
-const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, styles?: CSSStyleSheet ) => FormComponent<State, Props> = _FormComponent as any
+const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, options?: Options ) => FormComponent<State, Props> = _FormComponent as any
 
 
 export { Component, FormComponent };
