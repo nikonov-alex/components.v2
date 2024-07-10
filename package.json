@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/nikonov-alex/components.v2#readme",
   "dependencies": {
-    "@nikonov-alex/functional-library": "^0.0.30",
+    "@nikonov-alex/functional-library": "^0.0.31",
     "morphdom": "^2.7.0"
   },
   "devDependencies": {
