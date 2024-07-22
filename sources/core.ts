@@ -1,15 +1,25 @@
 import morphdom from "morphdom";
 
 type World = Window;
+type EventChannel = "global" | "local";
 
 type Render<State> = { ( s: State ): HTMLElement };
 type EventHandler<State> = { ( s: State, e: Event, w: World ): State };
+type EventRecord<State> = EventHandler<State> | {
+    handler: EventHandler<State>,
+    source: EventChannel
+};
 type Events<State> = { [name: string]: EventHandler<State> };
+type EventRecords<State> = { [name: string]: EventRecord<State> };
 type MutationHandler<State> = { ( s: State, elem: HTMLElement, w: World ): State };
 
 type EmitPredicate<State> = { ( os: State, ns: State ): boolean };
 type EventEmitter<State> = { ( s: State ): Event };
-type EmitRecord<State> = { when: EmitPredicate<State>, emit: EventEmitter<State> | EventEmitter<State>[] }
+type EmitRecord<State> = {
+    when: EmitPredicate<State>,
+    emit: EventEmitter<State> | EventEmitter<State>[],
+    channel?: EventChannel
+}
 
 type Setter<State, T> = { set: { ( s: State, v: T ): State }, predicate: { ( v: any ): v is T } }
 type Getter<State, T> = { get: { ( s: State ): T } };
@@ -29,7 +39,7 @@ type Args<State, Props extends {}> = {
     render: Render<State>,
     viewupdated?: ViewUpdated<State>,
     domchange?: DOMChange<State>,
-    events?: Events<State>,
+    events?: EventRecords<State>,
     emit?: EmitRecord<State>[],
     props?: { [prop in keyof Props]: Prop<State, Props[prop]> }
 };
@@ -37,29 +47,31 @@ type Args<State, Props extends {}> = {
 const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} =>
     typeof value === "function";
 
+const localEvents = <State>( events: EventRecords<State> ): Events<State> =>
+    Object.keys( events ).reduce( ( result, event ) => {
+        const record = events[event];
+        return typeof record === "function" || typeof record === "object" && record.source === "local"
+            ? {...result, [event]: events[event]}
+            : result
+    }, { } );
 
-const GLOBAL_EVENTS = [ "hashchange", "popstate" ];
-
-const localEvents = <State>( events: Events<State> ): Events<State> =>
-    Object.keys( events ).reduce( ( result, event ) =>
-            GLOBAL_EVENTS.includes( event )
-                ? result
-                : { ... result, [event]: events[event] }
-        , { } );
-
-const globalEvents = <State>( events: Events<State> ): Events<State> =>
-    Object.keys( events ).reduce( ( result, event ) =>
-            !GLOBAL_EVENTS.includes( event )
-                ? result
-                : { ... result, [event]: events[event] }
-        , { } );
+const globalEvents = <State>( events: EventRecords<State> ): Events<State> =>
+    Object.keys( events ).reduce( ( result, event ) => {
+        const record = events[event];
+        return typeof record === "object" && record.source === "global"
+            ? {...result, [event]: events[event]}
+            : result;
+    }, { } );
 
 type DOMMode = "light" | "shadow";
+
+type RedrawMode = "replace" | "update";
 
 type Options = {
     styles?: CSSStyleSheet,
     dommode?: DOMMode,
-    debug?: boolean
+    debug?: boolean,
+    redrawMode?: RedrawMode
 }
 
 
@@ -80,6 +92,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
     private _document: ShadowRoot | HTMLElement;
     protected _connected: boolean = false;
     private _domchangeObserver?: MutationObserver;
+    private _redrawMode: RedrawMode;
 
     constructor( args: Args<State, Props>, options?: Options ) {
         super();
@@ -96,6 +109,8 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         if ( !dommode ) {
             dommode = "shadow";
         }
+
+        this._redrawMode = options?.redrawMode || "update";
 
         this._document = "shadow" === dommode
             ? this.attachShadow( {
@@ -245,7 +260,7 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         if ( this._root.isEqualNode( rendered ) ) {
             return;
         }
-        if ( this._root.nodeName !== rendered.nodeName ) {
+        if ( this._redrawMode === "replace" || this._root.nodeName !== rendered.nodeName ) {
             this._root.replaceWith( rendered );
             this._root = rendered;
         }
@@ -264,13 +279,16 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         if ( this._emit ) {
             for ( const record of this._emit ) {
                 if ( record.when( oldState, this._state ) ) {
+                    const channel = "global" === record.channel
+                        ? window
+                        : this;
                     if ( Array.isArray( record.emit ) ) {
                         record.emit.forEach( emitter => {
-                            this.dispatchEvent( emitter( this._state ) );
+                            channel.dispatchEvent( emitter( this._state ) );
                         } );
                     }
                     else {
-                        this.dispatchEvent( record.emit( this._state ) );
+                        channel.dispatchEvent( record.emit( this._state ) );
                     }
                 }
             }
