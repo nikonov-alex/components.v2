@@ -50,16 +50,18 @@ const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} 
 const localEvents = <State>( events: EventRecords<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) => {
         const record = events[event];
-        return typeof record === "function" || typeof record === "object" && record.channel === "local"
-            ? {...result, [event]: events[event]}
-            : result
+        return typeof record === "function"
+            ? {...result, [event]: record}
+        : typeof record === "object" && record.channel === "local"
+            ? {...result, [event]: record.handler}
+        : result
     }, { } );
 
 const globalEvents = <State>( events: EventRecords<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) => {
         const record = events[event];
         return typeof record === "object" && record.channel === "global"
-            ? {...result, [event]: events[event]}
+            ? {...result, [event]: record.handler}
             : result;
     }, { } );
 
