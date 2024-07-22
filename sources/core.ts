@@ -7,7 +7,7 @@ type Render<State> = { ( s: State ): HTMLElement };
 type EventHandler<State> = { ( s: State, e: Event, w: World ): State };
 type EventRecord<State> = EventHandler<State> | {
     handler: EventHandler<State>,
-    source: EventChannel
+    channel: EventChannel
 };
 type Events<State> = { [name: string]: EventHandler<State> };
 type EventRecords<State> = { [name: string]: EventRecord<State> };
@@ -50,7 +50,7 @@ const isInitialFunc = <State>( value: unknown ): value is {( w: World ): State} 
 const localEvents = <State>( events: EventRecords<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) => {
         const record = events[event];
-        return typeof record === "function" || typeof record === "object" && record.source === "local"
+        return typeof record === "function" || typeof record === "object" && record.channel === "local"
             ? {...result, [event]: events[event]}
             : result
     }, { } );
@@ -58,7 +58,7 @@ const localEvents = <State>( events: EventRecords<State> ): Events<State> =>
 const globalEvents = <State>( events: EventRecords<State> ): Events<State> =>
     Object.keys( events ).reduce( ( result, event ) => {
         const record = events[event];
-        return typeof record === "object" && record.source === "global"
+        return typeof record === "object" && record.channel === "global"
             ? {...result, [event]: events[event]}
             : result;
     }, { } );
