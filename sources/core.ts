@@ -4,7 +4,7 @@ type World = Window;
 
 type Render<State> = { ( s: State ): HTMLElement };
 type EventHandler<State> = { ( s: State, e: Event, w: World ): State };
-type Events<State> = { [name: string]: EventHandler<State> };
+type Events<State, Ev extends string = string> = { [name in Ev]: EventHandler<State> };
 type MutationHandler<State> = { ( s: State, elem: HTMLElement, w: World ): State };
 
 type EmitPredicate<State> = { ( os: State, ns: State ): boolean };
@@ -23,6 +23,7 @@ type DOMChange<State> = MutationHandler<State> | {
     trigger: MutationHandler<State>,
     options: MutationObserverInit
 };
+
 
 type Args<State, Props extends {}> = {
     initialState: State | {( w: World ): State},
@@ -251,8 +252,20 @@ abstract class _Component<State, Props extends {}> extends HTMLElement {
         }
         else {
             morphdom( this._root, rendered, {
+                getNodeKey: node => {
+                    if ( "reference" in node ) {
+                        //@ts-ignore
+                        return node.reference.deref().module;
+                    }
+                    else if ( "module" in node ) {
+                        return node.module;
+                    }
+                    //@ts-ignore
+                    return node.id;
+                },
                 onBeforeElUpdated: ( fromEl, toEl ) =>
-                    !fromEl.isEqualNode( toEl )
+                    //@ts-ignore
+                    !fromEl.isEqualNode( toEl ) && (!("reference" in toEl) || !fromEl.isEqualNode( toEl.reference.deref() ))
             } );
         }
         if ( this._viewupdated ) {
@@ -362,4 +375,39 @@ type FormComponent<State, Props extends {}> = Props & _FormComponent<State, Prop
 const FormComponent: new <State, Props extends {}>( args: FormComponentArgs<State, Props>, options?: Options ) => FormComponent<State, Props> = _FormComponent as any
 
 
-export { Component, FormComponent, Options, Args };
+
+type Module<State extends {}, Ev extends string> = {
+    render: Render<State>,
+    events: Events<State, Ev>,
+    isModuleEvent: ( event: Event ) => boolean
+}
+
+const module = <State extends {}, Ev extends string>( args: Module<State, Ev> ): Module<State, Ev> => {
+    const cache = new WeakMap<State, HTMLElement>();
+    const getCached = ( state: State ): HTMLElement => {
+        const cached = cache.get( state ) as HTMLElement;
+        const stub = cached.cloneNode( false ) as HTMLElement;
+        //@ts-ignore
+        stub.reference = cached;
+        return stub;
+    };
+    const cacheAdd = ( state: State ): HTMLElement => {
+        const rendered = args.render( state );
+        //@ts-ignore
+        rendered.module = state;
+        cache.set( state, rendered );
+        return rendered;
+    };
+
+    return {
+        ... args,
+        render: ( state: State ): HTMLElement =>
+            cache.has( state )
+                ? getCached( state )
+                : cacheAdd( state )
+    };
+}
+
+
+
+export { Component, FormComponent, Options, Args, module };
